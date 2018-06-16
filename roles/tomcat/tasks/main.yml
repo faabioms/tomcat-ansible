@@ -1,0 +1,47 @@
+---
+  - name: Add Tomcat Group
+    group: name=tomcat state=present
+    tags: user
+
+  - name: Create Tomcat User
+    user: name=tomcatuser group=tomcat home=/opt/apache-tomcat-{{ tomcat_distro }}
+    tags: user
+  
+  - name: Download Tomcat
+    get_url: url=http://mirror.nbtelecom.com.br/apache/tomcat/tomcat-{{ tomcat_version }}/v{{ tomcat_distro }}/bin/apache-tomcat-{{ tomcat_distro }}.tar.gz dest=/opt/apache-tomcat-{{ tomcat_distro }}.tar.gz
+    tags: download
+
+  - name: Extract file
+    unarchive: src=/opt/apache-tomcat-{{ tomcat_distro }}.tar.gz dest=/opt/ copy=no mode=0755 owner=tomcatuser group=tomcat
+    tags: download
+
+  - name: Change ownership of Tomcat installation
+    file: path=/opt/apache-tomcat-{{ tomcat_distro }}/ owner=tomcatuser group=tomcat state=directory recurse=yes
+
+  - name: Configure Tomcat users
+    template: src=tomcat-users.xml dest=/opt/apache-tomcat-{{ tomcat_distro }}/conf/ 
+    notify: restart tomcat
+
+  - name: Tomcat Server Configuration
+    template: src=server.xml dest=/opt/apache-tomcat-{{ tomcat_distro }}/conf/ 
+    notify: restart tomcat
+
+  - name: Install Tomcat init script
+    template: src=tomcat-init.sh dest=/etc/init.d/tomcat mode=0755
+  
+  - name: deploy the WAR file into tomcat
+    copy: src=assets/tomcat.war dest=/opt/apache-tomcat-{{ tomcat_distro }}/webapps/tomcat.war mode=0755 owner=tomcatuser group=tomcat
+    notify: restart tomcat
+
+  - name: install Unzip
+    apt: name=unzip state=present
+
+  - name: unzip WAR file
+    unarchive: src=/opt/apache-tomcat-{{ tomcat_distro }}/webapps/tomcat.war dest=/opt/apache-tomcat-{{ tomcat_distro }}/webapps/ copy=no mode=0755 owner=tomcatuser group=tomcat
+
+  - name: Start Tomcat
+    service: name=tomcat state=started enabled=yes
+
+  - name: wait for tomcat to start
+    wait_for: port={{ http_port }}
+

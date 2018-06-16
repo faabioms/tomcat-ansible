@@ -1,0 +1,14 @@
+---
+
+  - hosts: host-ansible
+    remote_user: ansible
+    become: yes
+
+    vars:
+      tomcat_version: 7
+      tomcat_distro: 7.0.88
+      app_name: tomcat-ansible
+
+    roles:
+      - java
+      - tomcat
